@@ -59,8 +59,8 @@ const BannerCarousel = () => {
 
   const images = [
     "/images/rightside-banner.png",
-    "/images/rightside-banner2.png",
-    "/images/rightside-banner3.png",
+    "/images/banner2.png",
+    "/images/banner3.png",
   ];
 
   return (
