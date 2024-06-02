@@ -3,10 +3,10 @@ import styled from "styled-components";
 import ReactPlayer from "react-player";
 import { connect } from "react-redux";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { getDocs } from "firebase/firestore";
-import { v4 } from "uuid";
-import { imageDb, txtDb } from "../firebase";
-import { addDoc, collection } from "firebase/firestore";
+import { getDocs, getDoc, doc, updateDoc, addDoc, collection, deleteDoc, Timestamp, runTransaction} from "firebase/firestore";
+import { v4 as uuidv4 } from "uuid";
+import { imageDb, txtDb } from "../firebase"; 
+
 
 const PostModal = (props) => {
     const [editorText, setEditorText] = useState("");
@@ -15,13 +15,13 @@ const PostModal = (props) => {
     const [assetArea, setAssetArea] = useState("");
     const [data, setData] = useState([]);
     const [reloadTrigger, setReloadTrigger] = useState(false);
-
-
+    const [comments, setComments] = useState({});
+    const [newComment, setNewComment] = useState("");
     const handleChange = (e) => {
         const image = e.target.files[0];
 
         if (image === "" || image === undefined) {
-            alert(`not an image, the file is a ${typeof image}`);
+            alert(`Not an image, the file is a ${typeof image}`);
             return;
         }
         setShareImage(image);
@@ -37,7 +37,7 @@ const PostModal = (props) => {
         e.preventDefault();
 
         if (shareImage !== "") {
-            const imgRef = ref(imageDb, `files/${v4()}`);
+            const imgRef = ref(imageDb, `files/${uuidv4()}`);
             try {
                 const snapshot = await uploadBytes(imgRef, shareImage);
                 const downloadURL = await getDownloadURL(snapshot.ref);
@@ -48,9 +48,13 @@ const PostModal = (props) => {
                     imgUrl: downloadURL,
                     username: props.user.displayName,
                     userimg: props.user.photoURL,
+                    useremail: props.user.email,
+                    time: Timestamp.now(),
+                    likestate: false,
+                    videoLink: ""
                 });
                 reset(e);
-                setReloadTrigger(!reloadTrigger)
+                setReloadTrigger(!reloadTrigger);
             } catch (error) {
                 console.error("Error uploading image or adding document: ", error);
             }
@@ -61,26 +65,94 @@ const PostModal = (props) => {
                 imgUrl: "",
                 username: props.user.displayName,
                 userimg: props.user.photoURL,
+                useremail: props.user.email,
+                time: Timestamp.now(),
+                likestate: false,
                 videoLink: videoLink
             });
             reset(e);
-            setReloadTrigger(!reloadTrigger)
+            setReloadTrigger(!reloadTrigger);
         }
     };
 
     const getData = async () => {
         const valRef = collection(txtDb, 'txtData');
         const dataDb = await getDocs(valRef);
-        const allData = dataDb.docs.map(val => ({ ...val.data(), id: val.id }))
+        const allData = dataDb.docs.map((val) => ({ ...val.data(), id: val.id }));
         setData(allData);
 
+        const commentsData = {};
+        allData.forEach((post) => {
+            commentsData[post.id] = post.comments || [];
+        });
+        setComments(commentsData);
+    };
+
+    const handleLike = async (value) => {
+        const postRef = doc(txtDb, 'txtData', value.id);
+    
+        try {
+            await runTransaction(txtDb, async (transaction) => {
+                const postDoc = await transaction.get(postRef);
+                if (!postDoc.exists()) {
+                    throw "Document does not exist!";
+                }
+    
+                const postData = postDoc.data();
+                const currentLikes = postData.likes || 0;
+                const likedBy = Array.isArray(postData.likedBy) ? postData.likedBy : [];
+    
+                
+                if (!likedBy.includes(props.user.uid)) {
+                    transaction.update(postRef, {
+                        likes: currentLikes + 1,
+                        likedBy: [...likedBy, props.user.uid]
+                    });
+                }
+            });
+    
+            setReloadTrigger(!reloadTrigger);
+        } catch (error) {
+            console.error("Error handling like:", error);
+        }
+    };
+    
+
+    const formatDate = (timestamp) => {
+        if (timestamp) {
+            const date = timestamp.toDate();
+            return date.toLocaleString();
+        }
+        return "";
+    };
+    
+    const handleComment = async (id) => {
+        const postRef = doc(txtDb, 'txtData', id);
+        const postDoc = await getDoc(postRef);
+        const currentComments = postDoc.data().comments || [];
+        const updatedComments = [...currentComments, { text: newComment, user: props.user.displayName }];
+        await updateDoc(postRef, { comments: updatedComments });
+
+        setComments((prevComments) => ({
+            ...prevComments,
+            [id]: updatedComments
+        }));
+
+        setNewComment("");
+        setReloadTrigger(!reloadTrigger);
+    };
+
+    const handleDelete = async (id, email) => {
+        const postRef = doc(txtDb, 'txtData', id);
+        if (props.user.email == email){
+            await deleteDoc(postRef);
+        }
+        setReloadTrigger(!reloadTrigger);
     };
 
     useEffect(() => {
         getData();
     }, [reloadTrigger]);
-
-    console.log(data, "datadata");
 
     const reset = (e) => {
         setEditorText("");
@@ -90,6 +162,7 @@ const PostModal = (props) => {
         props.handleClick(e); // This will handle closing the modal
     };
 
+    
 
     return (
         <>
@@ -166,66 +239,95 @@ const PostModal = (props) => {
                                 </AssetButton>
                             </ShareComment>
                             <PostButton
-                                disabled={!editorText ? true : false}
-                                onClick={(event) => postArticle(event)}>
+                                disabled={!editorText}
+                                onClick={(event) => postArticle(event)}
+                            >
                                 Post
                             </PostButton>
                         </SharedCreation>
                     </Content>
                 </Container>
-
             )}
-            {
-                data.map(value => <Article>
+            {data.map((value) => (
+                <Article key={value.id}>
                     <SharedActor>
                         <a>
                             <img src={value.userimg} alt="user-icon" />
                             <div>
                                 <span>{value.username}</span>
-                                <br />
+                                
+                                <span id="time-on-post">{formatDate(value.time)}</span>
                             </div>
                         </a>
-                        <button>
-                            <img src="/images/ellipses.svg" />
+                        <button  onClick={() => handleDelete(value.id, value.useremail)}>
+                            <img id="del-img" src="/images/icons8-bin.gif" alt="Delete" />
+                        </button>
+                        <button onClick={() => handleDelete(value.id, value.useremail)}>
+                            <img id="edit-img" src="/images/icons8-edit.gif" alt="Delete" />
+                            
                         </button>
                     </SharedActor>
                     <Description>{value.txtVal}</Description>
                     <SharedImg>
-                        {shareImage === "" ? (<img src={value.imgUrl} />) : (<ReactPlayer width={"100%"} url={value.videoLink} /> )}
+                        {value.imgUrl || value.videoLink ? (
+                            (value.imgUrl)?
+                            <img src={value.imgUrl} alt="Shared content" /> 
+                            :
+                            <ReactPlayer width={"100%"} url={value.videoLink} />
+                        ):(
+                            <p></p>
+                        )}
                     </SharedImg>
                     <SocialCounts>
                         <li>
-                            <button>
-                                <img src="https://static-exp1.licdn.com/sc/h/d310t2g24pvdy4pt1jkedo4yb" />
-                                <img src="https://static-exp1.licdn.com/sc/h/5thsbmikm6a8uov24ygwd914f" />
-                                <span>75</span>
+                            <button onClick={() => handleLike(value.id)}>
+                                <img src="https://static-exp1.licdn.com/sc/h/d310t2g24pvdy4pt1jkedo4yb" alt="Like" />
+                                <img src="https://static-exp1.licdn.com/sc/h/5thsbmikm6a8uov24ygwd914f" alt="Like" />
+                                <span>{value.likes || 0}</span>
                             </button>
                         </li>
-
                         <li>
-                            <a>2 comments</a>
+                            <a>{comments[value.id]?.length || 0} comments</a>
                         </li>
                     </SocialCounts>
                     <SocialActions>
-                        <button>
-                            <img src="/images/like-icon.png" />
+                        <button onClick={() => handleLike(value)}>
+                            <img src="/images/like-icon.png" alt="Like" />
                             <span>Like</span>
                         </button>
                         <button>
-                            <img src="/images/comment-icon.svg" />
+                            <img src="/images/comment-icon.svg" alt="Comment" />
                             <span>Comment</span>
                         </button>
                         <button>
-                            <img src="/images/share-icon.png" />
+                            <img src="/images/share-icon.png" alt="Share" />
                             <span>Share</span>
                         </button>
                         <button>
-                            <img src="/images/send-icon.svg" />
+                            <img src="/images/send-icon.svg" alt="Send" />
                             <span>Send</span>
                         </button>
                     </SocialActions>
-                </Article>)
-            }
+                    <CommentSection>
+                        {comments[value.id]?.map((comment, index) => (
+                            <Comment key={index}>
+                                <strong>{comment.user}:</strong> {comment.text}
+                            </Comment>
+                        ))}
+                        <input
+                            type="text"
+                            placeholder="Add a comment..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    handleComment(value.id);
+                                }
+                            }}
+                        />
+                    </CommentSection>
+                </Article>
+            ))}
         </>
     );
 };
@@ -241,6 +343,7 @@ const Container = styled.div`
     background-color: rgba(0, 0, 0, 0.8);
     animation: fadeIn 0.3s;
 `;
+
 const CommonCard = styled.div`
   text-align: center;
   overflow: center;
@@ -250,8 +353,8 @@ const CommonCard = styled.div`
   position: relative;
   border: none;
   box-shadow: 0 0 0 1px rgb(0 0 0 /15%), 0 0 0 rgb(0 0 0/ 20%);
-
 `;
+
 const Content = styled.div`
     width: 100%;
     max-width: 552px;
@@ -390,161 +493,192 @@ const UploadImage = styled.div`
         width: 100%;
     }
 `;
-const Article = styled(CommonCard)`
-  padding: 0;
-  margin: 0 0 8px;
-  overflow: visible;
-  overflow: hidden;
 
-  
+const Article = styled(CommonCard)`
+    padding: 0;
+    margin: 0 0 8px;
+    overflow: visible;
 `;
 
-
 const SharedActor = styled.div`
-padding-right: 4px;
-  flex-wrap: nowrap;
-  padding: 12px 16px 0;
-  margin-bottom: 8px;
-  align-items: center;
-  display: flex;
+    padding-right: 4px;
+    flex-wrap: nowrap;
+    padding: 12px 16px 0;
+    margin-bottom: 8px;
+    align-items: left;
+    display: flex;
     width: 100%;
-  a{
-    margin-right: 12px;
-    flex-grow: 1;
-    overflow: hidden;
-    display: flex;
-    text-decoration: none;
-    img{
-        border-radius: 50%;
+    a {
+        margin-right: 12px;
+        flex-grow: 1;
+        overflow: hidden;
+        display: flex;
+        text-decoration: none;
+        img {
+            border-radius: 50%;
+        }
+        
+        
     }
-    div > span{
-        width: 200px;
+    
+
+
+    button > img{
+        height: 20px;
+        width: 20px;
+        padding: 10px;
+        margin: 5px;
+    }
+    #del-img{
+        margin-left: 10px; 
+    }
+
+    #edit-img{
+        margin-right: 50px;
+    }
+    img {
+        width: 48px;
+        height: 48px;
+    }
+    
+    
+    div {
+        display: flex;
+        flex-direction: column;
         position: relative;
-        top: 10px;
-        padding-left: 10px;
-    }
-  }
-
-  img{
-    width: 48px;
-    height: 48px;
-  }
-
-  &>div{
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    flex-basis: 0;
-    margin-left: 8px;
-    overflow: hidden;
-  }
-
-  span{
-    text-align: left;
-    &:first-child{
-      font-size: 14px;
-      font-weight: 700;
-      color: (0, 0, 0, 1);
+        top: 5px;
+        flex-grow: 1;
+        flex-basis: 0;
+        margin-left: 15px;
+        overflow: hidden;
     }
 
-    &:nth-Child(n+1){
-      font-size: 12px;
-      color: rgba(0, 0, 0, 0.6);
+    span {
+        text-align: left;
+        &:first-child {
+            font-size: 14px;
+            font-weight: 700;
+            color: rgba(0, 0, 0, 1);
+        }
 
+        &:nth-child(n+1) {
+            font-size: 12px;
+            color: rgba(0, 0, 0, 0.6);
+        }
     }
-  }
-  button > img{
-    height:20px;
-  }
-  button{
-    position: absolute;
-    right: 12px;
-    top: 0;
-    background: transparent;
-    border: none;
-    outline: none;
-  }
+    button > img {
+        height: 20px;
+    }
+    button {
+        position: absolute;
+        right: 12px;
+        top: 0;
+        background: transparent;
+        border: none;
+        outline: none;
+    }
 `;
 
 const Description = styled.div`
-  padding: 0 16px;
-  overflow: hidden;
-  color: rgba(0, 0, 0, 0.9);
-  font-size: 14px;
-  text-align: left;
-
+    padding: 0 16px;
+    overflow: hidden;
+    color: rgba(0, 0, 0, 0.9);
+    font-size: 14px;
+    text-align: left;
 `;
+
 const SharedImg = styled.div`
-  
-  width: 100%;
-  display: block;
-  position: relative;
-  background-color: #f9fafb;
-  border-radius: 10px;
-  overflow: hidden;
-  
-  img{
-    object-fit: contain;
     width: 100%;
-    height: 100%;
-  }
+    display: block;
+    position: relative;
+    background-color: #f9fafb;
+    border-radius: 10px;
+    overflow: hidden;
+
+    img {
+        object-fit: contain;
+        width: 100%;
+        height: 100%;
+    }
 `;
 
 const SocialCounts = styled.ul`
-  line-height: 1.3;
-  display: flex;
-  align-items: flex-start;
-  overflow: auto;
-  margin: 0 16px;
-  padding: 8px 0;
-  border-bottom: 1px solid #e9e5df;
-  list-style: none;
+    line-height: 1.3;
+    display: flex;
+    align-items: flex-start;
+    overflow: auto;
+    margin: 0 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e9e5df;
+    list-style: none;
 
-  li{
-    margin-right: 20px;
-    font-size: 12px;
+    li {
+        margin-right: 20px;
+        font-size: 12px;
 
-    button{
-      display: flex;
-      background: none;
-      border: none;
+        button {
+            display: flex;
+            background: none;
+            border: none;
+        }
     }
-  }
-
-
 `;
 
 const SocialActions = styled.div`
+    align-items: center;
+    display: flex;
+    justify-content: flex-start;
+    margin: 0;
+    min-height: 40px;
+    padding: 4px 8px;
 
-align-items: center;
-display: flex;
-justify-content: flex-start;
-margin: 0;
-min-height: 40px;
-padding: 4px 8px;
-
-button > img{
-  height: 15px;
-}
-
-button{
-  displayL inline-flex;
-  align-items: center;
-  padding: 5px 50px;
-  color: #0a66c2;
-  background: none;
-  border: none;
-
-  @media(min-width: 768px){
-    span{
-      margin-left: 8px;
-      
+    button > img {
+        height: 15px;
     }
-  }
-}
+
+    button {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 50px;
+        color: #0a66c2;
+        background: none;
+        border: none;
+
+        @media(min-width: 768px) {
+            span {
+                margin-left: 8px;
+            }
+        }
+    }
 `;
 
+const CommentSection = styled.div`
+    padding: 0 16px 16px;
+    display: flex;
+    flex-direction: column;
+    
+    input {
+        width: 97.5%;
+        padding: 8px;
+        margin-top: 8px;
+        margin-right: 8px;
+        border-radius: 5px;
+        border: 1px solid #e9e5df;
+    }
+`;
 
+const Comment = styled.div`
+    margin-top: 8px;
+    padding: 2px;
+    border: 1px solid #e9e5df;
+    border-radius: 5px;
+    background: #f9fafb;
+    align-items: left;
+    strong {
+
+        font-weight: bold;
+    }
+`;
 
 const mapStateToProps = (state) => {
     return {
@@ -552,5 +686,5 @@ const mapStateToProps = (state) => {
     };
 };
 
-
 export default connect(mapStateToProps)(PostModal);
+

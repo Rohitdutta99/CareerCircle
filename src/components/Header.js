@@ -7,7 +7,7 @@ const Header = (props) => {
       <Content>
         <Logo>
           <a href="/home">
-            <img src="/images/home-logo.svg" alt="" />
+            <img src="/images/2.svg" alt="" />
           </a>
         </Logo>
         <Search>
@@ -107,8 +107,11 @@ const Content = styled.div`
 `;
 
 const Logo = styled.span`
-  margin-right: 8px;
+  margin-right: 20px;
   font-size: 0px;
+  img{
+    height: 60px;;
+  }
 `;
 
 const Search = styled.div`
@@ -224,7 +227,8 @@ const NavList = styled.li`
 
 const SignOut = styled.div`
   position: absolute;
-  top: 45px;
+  top: 52px;
+  right: 150px;
   background: white;
   border-radius: 0 0 5px 5px;
   width: 100px;
@@ -251,13 +255,13 @@ a > img {
 
   #user-icon{
     position: relative;
-    top: 8px;
+    top: 10px;
   }
   span {
     display: flex;
     align-items: center;
     position: relative;
-    top: 9px;
+    top: 1px;
   }
 
   &:hover {

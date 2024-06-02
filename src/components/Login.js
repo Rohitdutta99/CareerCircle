@@ -11,11 +11,11 @@ const Login = (props) => {
             {props.user && <Navigate to="/home" />}
             <Nav>
                 <a href="/">
-                    <img src="/images/login-logo.svg" alt="" />
+                    <img src="/images/3.svg" alt="" />
                 </a>
                 <div>
                     <Join>Join now</Join>
-                    <SignIn>Sign in</SignIn>
+                    <SignIn onClick={() => props.signIn()}>Log in</SignIn>
                 </div>
             </Nav>
             <Section>
@@ -36,6 +36,7 @@ const Login = (props) => {
 
 const Container = styled.div`
 padding: 0;
+
 `;
 const Nav = styled.nav`
 max-width: 1300px;
@@ -53,6 +54,14 @@ flex-wrap: nowrap;
     @media (max-width: 768px){
         padding: 0 5px;
     }
+}
+
+img{
+    height: 200px;
+    position: relative;
+    bottom: 70px;
+    mix-blend-mode: multiply;
+
 }
 `;
 
@@ -73,8 +82,8 @@ margin-right: 12px;
 `;
 
 const SignIn = styled.a`
-box-shadow: inset 0 0 0 1px #0a66c2;
-color: #0a66c2;
+box-shadow: inset 0 0 0 1px #004AAD;
+color: #004AAD;
 border-radius: 24px;
 transition-duration: 167ms;
 font-size: 16px;
@@ -94,7 +103,7 @@ background-color: rgba(0, 0, 0, 0);
 const Section = styled.section`
 display: flex;
 align-content: start;
-min-height: 700px;
+min-height: 50vh;
 padding-bottom: 138px;
 padding-top: 40px;
 padding: 60px 0;
@@ -109,7 +118,11 @@ margin: auto;
     margin: auto;
     min-height: 0px;
 }
+
+
 `;
+
+
 
 const Hero = styled.div`
 width: 100%;
@@ -117,9 +130,10 @@ h1{
     padding-bottom: 0;
     width: 55%;
     font-size: 56px;
-    color: #2977c9;
+    color: #004AAD;
     font-weight: 200;
-    line-height: 70px;
+    line-height: 75px;
+    padding-top: 70px;
     
     @media(max-width: 768px){
         text-align: center;
@@ -131,7 +145,7 @@ h1{
 
     img{
         width: 700px;
-        height: 670px;
+        height: 700px;
         position: absolute;
         top: 2px;
         right: -150px;
