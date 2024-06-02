@@ -3,7 +3,7 @@ import styled from "styled-components";
 import ReactPlayer from "react-player";
 import { connect } from "react-redux";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { getDocs, getDoc, doc, updateDoc, addDoc, collection, deleteDoc, Timestamp, runTransaction} from "firebase/firestore";
+import { getDocs, getDoc, doc, updateDoc, addDoc, collection, deleteDoc, Timestamp, runTransaction, onSnapshot} from "firebase/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { imageDb, txtDb } from "../firebase"; 
 
@@ -151,6 +151,19 @@ const PostModal = (props) => {
     };
 
     useEffect(() => {
+        const valRef = collection(txtDb, 'txtData');
+        const unsubscribe = onSnapshot(valRef, (snapshot) => {
+            const allData = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+            setData(allData);
+
+            const commentsData = {};
+            allData.forEach((post) => {
+                commentsData[post.id] = post.comments || [];
+            });
+            setComments(commentsData);
+        });
+
+        return () => unsubscribe();
         getData();
     }, [reloadTrigger]);
 

@@ -1,7 +1,6 @@
 import { connect } from "react-redux";
 import styled from "styled-components";
 
-
 const Leftside = (props) => {
   return (
     <Container>
@@ -9,9 +8,7 @@ const Leftside = (props) => {
         <UserInfo>
           <CardBackground />
           <a>
-            <Photo>
-              <img src={props.user.photoURL} alt="user-image" />
-            </Photo>
+            <Photo />
             <Link>Welcome, {props.user? props.user.displayName: 'there'}!</Link>
           </a>
           <a>
@@ -89,6 +86,7 @@ const CardBackground = styled.div`
 
 const Photo = styled.div`
   box-shadow: none;
+  background-image: url("/images/photo.svg");
   width: 72px;
   height: 72px;
   box-sizing: border-box;
@@ -100,13 +98,6 @@ const Photo = styled.div`
   border: 2px solid white;
   margin: -38px auto 12px;
   border-radius: 50%;
-
-  img{
-    position: relative;
-    overflow: hidden;
-    border-radius: 50%;
-    height: 65px;
-  }
 `;
 
 const Link = styled.div`
