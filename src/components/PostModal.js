@@ -641,7 +641,7 @@ const SocialCounts = styled.ul`
 
 const CommentList = styled.div`
     display: none;
-    `;
+`;
     const SocialActions = styled.div`
     align-items: center;
     display: flex;
@@ -649,7 +649,7 @@ const CommentList = styled.div`
     margin: 0;
     min-height: 40px;
     padding: 4px 8px;
-    
+    overflow: hidden;
     button > img {
         height: 15px;
     }

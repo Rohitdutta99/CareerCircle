@@ -39,8 +39,8 @@ const Container = styled.div`
   max-width: 1128px;
   margin-left: auto;
   margin-right: auto;
-  `;
-  
+`;
+
 const Section = styled.section`
 min-height: 50px;
 padding: 16px 0;
@@ -49,6 +49,9 @@ text-align: center;
 text-decoration: underline;
 display: flex;
 justify-content: center;
+@media (max-width: 768px) {
+  margin-left: 50px;
+}
 h5 {
   color: #0a66c2;
   font-size: 14px;
@@ -66,6 +69,7 @@ p {
 @media (max-width: 768px) {
   flex-direction: column;
   padding: 0 5px;
+  
 }
 `;
 
@@ -83,6 +87,7 @@ width: 95%;
     display: flex;
     flex-direction: column;
     padding: 0 5px;
+    margin-left: 3%;
   }
 `;
 

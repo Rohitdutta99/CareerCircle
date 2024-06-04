@@ -211,7 +211,7 @@ const NavList = styled.li`
     }
 
     @media (max-width: 768px) {
-      min-width: 70px;
+      min-width: 60px;
     }
   }
 
