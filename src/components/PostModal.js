@@ -657,7 +657,7 @@ const CommentList = styled.div`
     button {
         display: inline-flex;
         align-items: center;
-        padding: 5px 42px;
+        padding: 5px 53px;
         color: #0a66c2;
         background: none;
         border: none;
