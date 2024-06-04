@@ -685,7 +685,6 @@ const CommentList = styled.div`
     &:hover{
         ${CommentList}{
             display: block;
-            animation: fadeIn 0.3s;
         }
     }
     
@@ -693,6 +692,7 @@ const CommentList = styled.div`
     
     const Comment = styled.div`
     margin-top: 8px;
+    animation: fadeIn 0.5s;
     padding: 2px;
     border-radius: 20px;
     border: 0.02px grey solid;
